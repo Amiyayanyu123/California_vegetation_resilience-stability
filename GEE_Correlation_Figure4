@@ -1,0 +1,290 @@
+var Var_VODK = ee.Image("projects/ee-california-resilience/assets/VOD-X/Var_VOD_2000_2018_Xbands_detrend_mean");
+var AR1_VODK = ee.Image("projects/ee-california-resilience/assets/VOD-X/AR1_VODX_2000_2018_detrend_mean")
+//image to imagecollection
+var image_to_col = function (GLASS,name) {
+  
+var LAI_Year = GLASS.slice(0,1)
+var start_year = 2000;  
+var end_year = 2016;  
+var b = 17
+
+var LAI_Col_year = ee.ImageCollection(LAI_Year.toDouble().rename(name))
+
+for(var i=1;i< b;i++){
+  var imageSub = GLASS.slice(i,i+1).rename(name)
+  LAI_Col_year = LAI_Col_year.merge(ee.ImageCollection(imageSub))
+} 
+
+var LAI_List = LAI_Col_year.toList(b)
+
+var yearList = ee.List.sequence(start_year, end_year);  
+var yearImgList = yearList.map(function(year) {  
+  var time = ee.Date.fromYMD(year, 1, 1) 
+  
+  var num = ee.Number(year).subtract(2000)
+  
+  var image = ee.Image(LAI_List.get(num))
+  
+  return image.set("year", year) 
+            .set('system:time_start', ee.Date.fromYMD(year, 1, 1).millis())
+});  
+
+var LAI_yearly = ee.ImageCollection.fromImages(yearImgList)
+
+return(LAI_yearly)
+}
+//
+
+var Var_VODK = image_to_col(Var_VODK.toDouble(),"Var_VODK")
+print(Var_VODK)
+////////////////////////////////////////////////////////////////////
+var roi = ee.FeatureCollection("projects/ee-urbanstudyinequality-1/assets/California");
+//
+var reproject_mean = function (image){
+var image =  image.reproject({
+    crs: 'EPSG:4326',
+    scale: 25000
+  }) //questions:about the reproject and resample
+return image
+}
+/////////////////////////////////////////////////////////////Terraclimate
+var Terraclimate = ee.ImageCollection("IDAHO_EPSCOR/TERRACLIMATE").filterDate("1982-01-01","2022-12-31").map(reproject_mean)
+
+var Temp = Terraclimate.map(function(image) {
+  return image.addBands(
+    image.expression('(a1*0.1+b1*0.1)/2', {
+      a1: image.select('tmmn'),
+      b1: image.select('tmmx'),
+    }).rename('Temp'));
+});
+
+var DI = Temp.map(function(image) {
+  return image.addBands(
+    image.expression('(a1)/(b1*0.1)', {
+      a1: image.select('pr'),
+      b1: image.select('pet'),
+    }).rename('DI'));
+});
+
+var PET = DI.map(function(image) {
+  return image.addBands(
+    image.expression('(b1*0.1)', {
+      b1: image.select('srad'),
+    }).rename('Rs'));
+});
+
+var SM = PET.map(function(image) {
+  return image.addBands(
+    image.expression('(b1*0.1)', {
+      b1: image.select('soil'),
+    }).rename('SM'));
+});
+
+var VPD = SM.map(function(image) {
+  return image.addBands(
+    image.expression('(b1*0.01)', {
+      b1: image.select('vpd'),
+    }).rename('VPD'));
+});
+
+var bandsName_climae = ["pr","Temp","Rs","DI","VPD","SM"]
+var climate_Terra = VPD.select(bandsName_climae)
+
+//
+var startyear = 1982; 
+var endyear = 2022; 
+
+var startmonth = 1;
+var endmonth= 12;
+
+var startdate = ee.Date.fromYMD(startyear, startmonth, 1);
+var enddate = ee.Date.fromYMD(endyear+1 , endmonth, 1);
+var years = ee.List.sequence(startyear, endyear);
+var months = ee.List.sequence(startmonth,endmonth);
+//
+var climate_Terra_month = ee.ImageCollection.fromImages(
+  years.map(function (y) {
+    return months.map(function(m) {
+    // var n=m+1;
+     //print(m)
+      var w = climate_Terra.filter(ee.Filter.calendarRange(y, y, 'year'))
+                    .filter(ee.Filter.calendarRange(m, m, 'month'))
+                    .mean();
+                    
+      return w.set('year', y)
+              .set('month', m)
+              .set('system:time_start', ee.Date.fromYMD(y, m, 1).millis());
+    });
+  }).flatten()
+);
+
+////////////////////////////////AET from PML
+//
+var PDSI = ee.ImageCollection("GRIDMET/DROUGHT").map(reproject_mean).select("pdsi")
+
+var PDSI_month = ee.ImageCollection.fromImages(
+  years.map(function (y) {
+    return months.map(function(m) {
+    // var n=m+1;
+     //print(m)
+      var w = PDSI.filter(ee.Filter.calendarRange(y, y, 'year'))
+                    .filter(ee.Filter.calendarRange(m, m, 'month'))
+                    .mean();
+                    
+      return w.set('year', y)
+              .set('month', m)
+              .set('system:time_start', ee.Date.fromYMD(y, m, 1).millis());
+    });
+  }).flatten()
+);
+
+//join
+var filtereq = ee.Filter.equals({
+  leftField: 'year',
+  rightField: 'year',
+});
+var join = ee.Join.saveFirst({
+    matchKey: 'match',
+});
+var climate_Terra_month = ee.ImageCollection(join.apply(climate_Terra_month,PDSI_month,filtereq))
+  .map(function(image) {
+    return image.addBands(image.get('match'));
+  });
+
+//MEAN_TS
+var Mean_TS = function (ic){
+var years = ee.List.sequence(1984,2020)
+var windowSize = 2;
+var time_lam = function reduceFits(t){
+  var date = ee.Date.fromYMD(t,1,1);
+  
+  var data = ic.filterDate(date.advance(-windowSize,'year'),date.advance(windowSize,'year'))
+  
+  var lambda_time = data.reduce(ee.Reducer.mean())
+  
+  return lambda_time.set('system:time_start',date.millis())
+              .set("year", t)
+}
+
+var lam_LAI_TS = ee.ImageCollection(years.map(time_lam))
+
+return lam_LAI_TS
+}
+///////////////////////////////////////
+var rename = function(ic,new_name){
+  
+  function re_(img){
+    return img.rename(new_name)
+  }
+  return ic.map(re_)
+}
+
+//
+var Pre_M = Mean_TS(climate_Terra_month.select("pr"))
+var Rs_M = Mean_TS(climate_Terra_month.select("Rs"))
+var VPD_M = Mean_TS(climate_Terra_month.select("VPD"))
+var Temp_M = Mean_TS(climate_Terra_month.select("Temp"))
+var PDSI_M = Mean_TS(climate_Terra_month.select("pdsi"))
+var DI_M = Mean_TS(climate_Terra_month.select("DI"))
+var SM_M = Mean_TS(climate_Terra_month.select("SM"))
+//join the ic
+var filtereq = ee.Filter.equals({
+  leftField: 'year',
+  rightField: 'year',
+});
+var join = ee.Join.saveFirst({
+    matchKey: 'match',
+});
+var ALL = ee.ImageCollection(join.apply(Pre_M,Rs_M,filtereq))
+  .map(function(image) {
+    return image.addBands(image.get('match'));
+  });
+
+var ALL = ee.ImageCollection(join.apply(ALL,VPD_M,filtereq))
+  .map(function(image) {
+    return image.addBands(image.get('match'));
+  });
+
+var ALL = ee.ImageCollection(join.apply(ALL,Temp_M,filtereq))
+  .map(function(image) {
+    return image.addBands(image.get('match'));
+  });
+
+var ALL = ee.ImageCollection(join.apply(ALL,PDSI_M,filtereq))
+  .map(function(image) {
+    return image.addBands(image.get('match'));
+  });
+  ////////////////////////
+var ALL = ee.ImageCollection(join.apply(ALL,DI_M,filtereq))
+  .map(function(image) {
+    return image.addBands(image.get('match'));
+  });
+var ALL = ee.ImageCollection(join.apply(ALL,SM_M,filtereq))
+  .map(function(image) {
+    return image.addBands(image.get('match'));
+  });
+var ALL = ee.ImageCollection(join.apply(ALL,Var_VODK,filtereq))
+  .map(function(image) {
+    return image.addBands(image.get('match'));
+  });
+print(ALL)
+///////////////////////////////correlation
+var corr = function(joined_collection,band1,band2){
+  var coll=ee.ImageCollection(joined_collection);
+  var corr_img=coll.select([band1, band2])
+  .reduce(ee.Reducer.pearsonsCorrelation());
+  var te=corr_img.select("correlation");
+  var test=te;
+  return test;};
+ 
+ //
+ //mask
+var Land_10km = ee.ImageCollection("MODIS/061/MCD12Q1").select('LC_Type1')
+.filterDate("2022-01-01","2022-12-31").first().reduceResolution({
+      reducer: ee.Reducer.mode(),
+      maxPixels: 40000
+    })
+    .reproject({
+    crs: 'EPSG:4326',
+    scale: 25000
+  }).clip(roi)
+
+var mask = Land_10km.neq(13).and(Land_10km.neq(12)).and(Land_10km.neq(14)).and(Land_10km.neq(15))
+.and(Land_10km.neq(16)).and(Land_10km.neq(17))
+
+Map.addLayer(mask)
+//////////////////////////////
+var corr_1 = corr(ALL,"Var_VODK","pr_mean").rename("pr_mean")
+var corr_2 = corr(ALL,"Var_VODK","DI_mean").rename("DI_mean")
+var corr_3 = corr(ALL,"Var_VODK","pdsi_mean").rename("pdsi_mean")
+var corr_4 = corr(ALL,"Var_VODK","Temp_mean").rename("Temp_mean")
+var corr_5 = corr(ALL,"Var_VODK","VPD_mean").rename("VPD_mean")
+var corr_6 = corr(ALL,"Var_VODK","Rs_mean").rename("Rs_mean")
+var corr_7 = corr(ALL,"Var_VODK","SM_mean").rename("SM_mean")
+
+var all = corr_1.addBands(corr_2).addBands(corr_3).addBands(corr_4).addBands(corr_5)
+.addBands(corr_6).addBands(corr_7).clip(roi)
+
+Export.image.toDrive({
+ image:all,
+  description: 'Correlation_VODX_correlation_Var_VODK_climate',
+  folder: 'Correlation_VODX_correlation_Var_VODK_climate', 
+  scale: 25000,
+  maxPixels: 1e13})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
