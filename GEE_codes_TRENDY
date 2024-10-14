@@ -1,0 +1,673 @@
+//all
+var CABLE = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/CABLE_S3_AR1"),
+    CLASSIC = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/CLASSIC_S3_AR1"),
+    CLM5 = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/CLM5_S3_AR1"),
+    EDv = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/EDv_S3_AR1"),
+    IBIS = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/GUESS_S3_AR1"),
+    ISBA = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/IBIS_S3_AR1"),
+    JSBACH = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/ISBA_S3_AR1"),
+    JULES = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/JSBACH_S3_AR1"),
+    GUESS = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/JULES_S3_AR1"),
+    LPJmml = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/LPJmml_S3_AR1"),
+    LPX = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/LPX_S3_AR1"),
+    OCN = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/OCN_S3_AR1"),
+    ORCHIDEE = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/ORCHIDEE_S3_AR1"),
+    SDVGM = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/SDVGM_S3_AR1"),
+    VISIT = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/VISIT_S3_AR1"),
+    YIB = ee.Image("projects/ee-california-resilience/assets/Results_AR1_TRENDYY/YIB_S3_AR1");
+    
+////////////////////
+var image_to_col = function (GLASS,name) {
+  
+var LAI_Year = GLASS.slice(0,1)
+var start_year = 1984;  
+var end_year = 2020;  
+var b = 37
+
+var LAI_Col_year = ee.ImageCollection(LAI_Year.toDouble().rename(name))
+
+for(var i=1;i< b;i++){
+  var imageSub = GLASS.slice(i,i+1).rename(name)
+  LAI_Col_year = LAI_Col_year.merge(ee.ImageCollection(imageSub))
+} 
+
+var LAI_List = LAI_Col_year.toList(b)
+
+var yearList = ee.List.sequence(start_year, end_year);  
+var yearImgList = yearList.map(function(year) {  
+  var time = ee.Date.fromYMD(year, 1, 1) 
+  
+  var num = ee.Number(year).subtract(1984)
+  
+  var image = ee.Image(LAI_List.get(num))
+  
+  return image.set("year", year) 
+            .set('system:time_start', ee.Date.fromYMD(year, 1, 1).millis())
+});  
+
+var LAI_yearly = ee.ImageCollection.fromImages(yearImgList)
+
+return(LAI_yearly)
+}
+
+//
+var createYear = function(image) {
+  // Scale milliseconds by a large constant.
+  return image.addBands(image.metadata('year')).copyProperties(image,["system:time_start","year"]);
+};
+
+
+//
+function rename_ic(ic,name){
+ function rename(img){
+   return img.rename(name)
+ }
+ return ic.map(rename)
+} 
+//
+var CABLE = image_to_col(CABLE.toDouble(),"CABLE")
+    CLASSIC = image_to_col(CLASSIC.toDouble(),"CLASSIC")
+    CLM5 =  image_to_col(CLM5.toDouble(),"CLM5")
+    EDv = image_to_col(EDv.toDouble(),"EDv")
+    IBIS =  image_to_col(IBIS.toDouble(),"IBIS")
+    ISBA =  image_to_col(ISBA.toDouble(),"ISBA")
+    JSBACH =  image_to_col(JSBACH.toDouble(),"JSBACH")
+    JULES =  image_to_col(JULES.toDouble(),"JULES")
+    GUESS = image_to_col(GUESS.toDouble(),"GUESS")
+    LPJmml =  image_to_col(LPJmml.toDouble(),"LPJmml")
+    LPX = image_to_col(LPX.toDouble(),"LPX")
+    OCN =  image_to_col(OCN.toDouble(),"OCN")
+    ORCHIDEE =  image_to_col(ORCHIDEE.toDouble(),"ORCHIDEE")
+    SDVGM =  image_to_col(SDVGM.toDouble(),"SDVGM")
+    VISIT =  image_to_col(VISIT.toDouble(),"VISIT")
+    YIB =  image_to_col(YIB.toDouble(),"YIB")
+//
+
+var filtereq = ee.Filter.equals({
+  leftField: 'year',
+  rightField: 'year',
+});
+var join = ee.Join.saveFirst({
+    matchKey: 'match',
+});
+
+var Trendy = ee.ImageCollection(join.apply(CABLE,CLASSIC,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,CLM5,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,EDv,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,IBIS,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,ISBA,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,JSBACH,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,JULES,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,GUESS,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,LPJmml,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,LPX,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,OCN,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,ORCHIDEE,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,SDVGM,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,VISIT,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,YIB,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+
+var roi = ee.FeatureCollection("projects/ee-urbanstudyinequality-1/assets/California")
+
+var chart =
+    ui.Chart.image
+        .series({
+          imageCollection: Trendy,
+          region: roi,
+          reducer: ee.Reducer.mean(),
+          scale: 55000,
+          xProperty: 'system:time_start'
+        })
+        .setOptions({
+          title: 'AR1',
+          hAxis: {title: 'Date', titleTextStyle: {italic: false, bold: true}},
+          vAxis: {
+            title: ' ',
+            titleTextStyle: {italic: false, bold: true}
+          },
+          lineWidth: 5,
+          curveType: 'function'
+        });
+
+print(chart)
+////////////////////////////////////////CO2
+var CABLE = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/CABLE_S1_AR1"),
+CLASSIC = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/CLASSIC_S1_AR1"),
+CLM5 = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/CLM5_S1_AR1"),
+EDv = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/EDv_S1_AR1"),
+IBIS = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/GUESS_S1_AR1"),
+ISBA = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/IBIS_S1_AR1"),
+JSBACH = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/ISBA_S1_AR1"),
+JULES = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/JSBACH_S1_AR1"),
+GUESS = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/JULES_S1_AR1"),
+LPJmml = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/LPJmml_S1_AR1"),
+LPX = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/LPX_S1_AR1"),
+OCN = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/OCN_S1_AR1"),
+ORCHIDEE = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/ORCHIDEE_S1_AR1"),
+SDVGM = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/SDVGM_S1_AR1"),
+VISIT = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/VISIT_S1_AR1"),
+YIB = ee.Image("projects/ee-california-resilience/assets/TRENDY_CO2_LAI_AR1/YIB_S1_AR1");
+
+////////////////////
+var image_to_col = function (GLASS,name) {
+  
+var LAI_Year = GLASS.slice(0,1)
+var start_year = 1984;  
+var end_year = 2020;  
+var b = 37
+
+var LAI_Col_year = ee.ImageCollection(LAI_Year.toDouble().rename(name))
+
+for(var i=1;i< b;i++){
+  var imageSub = GLASS.slice(i,i+1).rename(name)
+  LAI_Col_year = LAI_Col_year.merge(ee.ImageCollection(imageSub))
+} 
+
+var LAI_List = LAI_Col_year.toList(b)
+
+var yearList = ee.List.sequence(start_year, end_year);  
+var yearImgList = yearList.map(function(year) {  
+  var time = ee.Date.fromYMD(year, 1, 1) 
+  
+  var num = ee.Number(year).subtract(1984)
+  
+  var image = ee.Image(LAI_List.get(num))
+  
+  return image.set("year", year) 
+            .set('system:time_start', ee.Date.fromYMD(year, 1, 1).millis())
+});  
+
+var LAI_yearly = ee.ImageCollection.fromImages(yearImgList)
+
+return(LAI_yearly)
+}
+
+//
+var createYear = function(image) {
+  // Scale milliseconds by a large constant.
+  return image.addBands(image.metadata('year')).copyProperties(image,["system:time_start","year"]);
+};
+
+
+//
+function rename_ic(ic,name){
+ function rename(img){
+   return img.rename(name)
+ }
+ return ic.map(rename)
+} 
+//
+var CABLE = image_to_col(CABLE.toDouble(),"CABLE")
+    CLASSIC = image_to_col(CLASSIC.toDouble(),"CLASSIC")
+    CLM5 =  image_to_col(CLM5.toDouble(),"CLM5")
+    EDv = image_to_col(EDv.toDouble(),"EDv")
+    IBIS =  image_to_col(IBIS.toDouble(),"IBIS")
+    ISBA =  image_to_col(ISBA.toDouble(),"ISBA")
+    JSBACH =  image_to_col(JSBACH.toDouble(),"JSBACH")
+    JULES =  image_to_col(JULES.toDouble(),"JULES")
+    GUESS = image_to_col(GUESS.toDouble(),"GUESS")
+    LPJmml =  image_to_col(LPJmml.toDouble(),"LPJmml")
+    LPX = image_to_col(LPX.toDouble(),"LPX")
+    OCN =  image_to_col(OCN.toDouble(),"OCN")
+    ORCHIDEE =  image_to_col(ORCHIDEE.toDouble(),"ORCHIDEE")
+    SDVGM =  image_to_col(SDVGM.toDouble(),"SDVGM")
+    VISIT =  image_to_col(VISIT.toDouble(),"VISIT")
+    YIB =  image_to_col(YIB.toDouble(),"YIB")
+//
+
+var filtereq = ee.Filter.equals({
+  leftField: 'year',
+  rightField: 'year',
+});
+var join = ee.Join.saveFirst({
+    matchKey: 'match',
+});
+
+var Trendy = ee.ImageCollection(join.apply(CABLE,CLASSIC,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,CLM5,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,EDv,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,IBIS,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,ISBA,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,JSBACH,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,JULES,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,GUESS,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,LPJmml,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,LPX,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,OCN,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,ORCHIDEE,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,SDVGM,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,VISIT,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,YIB,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+
+var roi = ee.FeatureCollection("projects/ee-urbanstudyinequality-1/assets/California")
+
+var chart =
+    ui.Chart.image
+        .series({
+          imageCollection: Trendy,
+          region: roi,
+          reducer: ee.Reducer.mean(),
+          scale: 55000,
+          xProperty: 'system:time_start'
+        })
+        .setOptions({
+          title: 'AR1',
+          hAxis: {title: 'Date', titleTextStyle: {italic: false, bold: true}},
+          vAxis: {
+            title: ' ',
+            titleTextStyle: {italic: false, bold: true}
+          },
+          lineWidth: 5,
+          curveType: 'function'
+        });
+
+print(chart)
+/////////////////////Climate
+var CABLE = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/CABLE_S2_S1_Climate_AR1"),
+CLASSIC = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/CLASSIC_S2_S1_Climate_AR1"),
+CLM5 = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/CLM5_S2_S1_Climate_AR1"),
+EDv = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/EDv_S2_S1_Climate_AR1"),
+IBIS = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/GUESS_S2_S1_Climate_AR1"),
+ISBA = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/IBIS_S2_S1_Climate_AR1"),
+JSBACH = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/ISBA_S2_S1_Climate_AR1"),
+JULES = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/JSBACH_S2_S1_Climate_AR1"),
+GUESS = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/JULES_S2_S1_Climate_AR1"),
+LPJmml = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/LPJmml_S2_S1_Climate_AR1"),
+LPX = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/LPX_S2_S1_Climate_AR1"),
+OCN = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/OCN_S2_S1_Climate_AR1"),
+ORCHIDEE = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/ORCHIDEE_S2_S1_Climate_AR1"),
+SDVGM = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/SDVGM_S2_S1_Climate_AR1"),
+VISIT = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/VISIT_S2_S1_Climate_AR1"),
+YIB = ee.Image("projects/ee-california-resilience/assets/TRENDY_LAI_Climate/YIB_S2_S1_Climate_AR1");
+
+////////////////////
+var image_to_col = function (GLASS,name) {
+  
+var LAI_Year = GLASS.slice(0,1)
+var start_year = 1984;  
+var end_year = 2020;  
+var b = 37
+
+var LAI_Col_year = ee.ImageCollection(LAI_Year.toDouble().rename(name))
+
+for(var i=1;i< b;i++){
+  var imageSub = GLASS.slice(i,i+1).rename(name)
+  LAI_Col_year = LAI_Col_year.merge(ee.ImageCollection(imageSub))
+} 
+
+var LAI_List = LAI_Col_year.toList(b)
+
+var yearList = ee.List.sequence(start_year, end_year);  
+var yearImgList = yearList.map(function(year) {  
+  var time = ee.Date.fromYMD(year, 1, 1) 
+  
+  var num = ee.Number(year).subtract(1984)
+  
+  var image = ee.Image(LAI_List.get(num))
+  
+  return image.set("year", year) 
+            .set('system:time_start', ee.Date.fromYMD(year, 1, 1).millis())
+});  
+
+var LAI_yearly = ee.ImageCollection.fromImages(yearImgList)
+
+return(LAI_yearly)
+}
+
+//
+var createYear = function(image) {
+  // Scale milliseconds by a large constant.
+  return image.addBands(image.metadata('year')).copyProperties(image,["system:time_start","year"]);
+};
+
+
+//
+function rename_ic(ic,name){
+ function rename(img){
+   return img.rename(name)
+ }
+ return ic.map(rename)
+} 
+//
+var CABLE = image_to_col(CABLE.toDouble(),"CABLE")
+    CLASSIC = image_to_col(CLASSIC.toDouble(),"CLASSIC")
+    CLM5 =  image_to_col(CLM5.toDouble(),"CLM5")
+    EDv = image_to_col(EDv.toDouble(),"EDv")
+    IBIS =  image_to_col(IBIS.toDouble(),"IBIS")
+    ISBA =  image_to_col(ISBA.toDouble(),"ISBA")
+    JSBACH =  image_to_col(JSBACH.toDouble(),"JSBACH")
+    JULES =  image_to_col(JULES.toDouble(),"JULES")
+    GUESS = image_to_col(GUESS.toDouble(),"GUESS")
+    LPJmml =  image_to_col(LPJmml.toDouble(),"LPJmml")
+    LPX = image_to_col(LPX.toDouble(),"LPX")
+    OCN =  image_to_col(OCN.toDouble(),"OCN")
+    ORCHIDEE =  image_to_col(ORCHIDEE.toDouble(),"ORCHIDEE")
+    SDVGM =  image_to_col(SDVGM.toDouble(),"SDVGM")
+    VISIT =  image_to_col(VISIT.toDouble(),"VISIT")
+    YIB =  image_to_col(YIB.toDouble(),"YIB")
+//
+
+var filtereq = ee.Filter.equals({
+  leftField: 'year',
+  rightField: 'year',
+});
+var join = ee.Join.saveFirst({
+    matchKey: 'match',
+});
+
+var Trendy = ee.ImageCollection(join.apply(CABLE,CLASSIC,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,CLM5,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,EDv,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,IBIS,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,ISBA,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,JSBACH,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,JULES,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,GUESS,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,LPJmml,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,LPX,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,OCN,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,ORCHIDEE,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,SDVGM,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,VISIT,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,YIB,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+
+var roi = ee.FeatureCollection("projects/ee-urbanstudyinequality-1/assets/California")
+
+var chart =
+    ui.Chart.image
+        .series({
+          imageCollection: Trendy,
+          region: roi,
+          reducer: ee.Reducer.mean(),
+          scale: 55000,
+          xProperty: 'system:time_start'
+        })
+        .setOptions({
+          title: 'AR1',
+          hAxis: {title: 'Date', titleTextStyle: {italic: false, bold: true}},
+          vAxis: {
+            title: ' ',
+            titleTextStyle: {italic: false, bold: true}
+          },
+          lineWidth: 5,
+          curveType: 'function'
+        });
+
+print(chart)
+//////////////////////////////////////LULC
+var CABLE = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/CABLE_S3_S2_LULC_AR1"),
+CLASSIC = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/CLASSIC_S3_S2_LULC_AR1"),
+CLM5 = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/CLM5_S3_S2_LULC_AR1"),
+EDv = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/EDv_S3_S2_LULC_AR1"),
+IBIS = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/GUESS_S3_S2_LULC_AR1"),
+ISBA = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/IBIS_S3_S2_LULC_AR1"),
+JSBACH = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/ISBA_S3_S2_LULC_AR1"),
+JULES = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/JSBACH_S3_S2_LULC_AR1"),
+GUESS = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/JULES_S3_S2_LULC_AR1"),
+LPJmml = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/LPJmml_S3_S2_LULC_AR1"),
+LPX = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/LPX_S3_S2_LULC_AR1"),
+OCN = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/OCN_S3_S2_LULC_AR1"),
+ORCHIDEE = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/ORCHIDEE_S3_S2_LULC_AR1"),
+SDVGM = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/SDVGM_S3_S2_LULC_AR1"),
+VISIT = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/VISIT_S3_S2_LULC_AR1"),
+YIB = ee.Image("projects/ee-california-resilience/assets/TRENDY_LULC_AR1_LAI/YIB_S3_S2_LULC_AR1");
+
+////////////////////
+var image_to_col = function (GLASS,name) {
+  
+var LAI_Year = GLASS.slice(0,1)
+var start_year = 1984;  
+var end_year = 2020;  
+var b = 37
+
+var LAI_Col_year = ee.ImageCollection(LAI_Year.toDouble().rename(name))
+
+for(var i=1;i< b;i++){
+  var imageSub = GLASS.slice(i,i+1).rename(name)
+  LAI_Col_year = LAI_Col_year.merge(ee.ImageCollection(imageSub))
+} 
+
+var LAI_List = LAI_Col_year.toList(b)
+
+var yearList = ee.List.sequence(start_year, end_year);  
+var yearImgList = yearList.map(function(year) {  
+  var time = ee.Date.fromYMD(year, 1, 1) 
+  
+  var num = ee.Number(year).subtract(1984)
+  
+  var image = ee.Image(LAI_List.get(num))
+  
+  return image.set("year", year) 
+            .set('system:time_start', ee.Date.fromYMD(year, 1, 1).millis())
+});  
+
+var LAI_yearly = ee.ImageCollection.fromImages(yearImgList)
+
+return(LAI_yearly)
+}
+
+//
+var createYear = function(image) {
+  // Scale milliseconds by a large constant.
+  return image.addBands(image.metadata('year')).copyProperties(image,["system:time_start","year"]);
+};
+
+
+//
+function rename_ic(ic,name){
+ function rename(img){
+   return img.rename(name)
+ }
+ return ic.map(rename)
+} 
+//
+var CABLE = image_to_col(CABLE.toDouble(),"CABLE")
+    CLASSIC = image_to_col(CLASSIC.toDouble(),"CLASSIC")
+    CLM5 =  image_to_col(CLM5.toDouble(),"CLM5")
+    EDv = image_to_col(EDv.toDouble(),"EDv")
+    IBIS =  image_to_col(IBIS.toDouble(),"IBIS")
+    ISBA =  image_to_col(ISBA.toDouble(),"ISBA")
+    JSBACH =  image_to_col(JSBACH.toDouble(),"JSBACH")
+    JULES =  image_to_col(JULES.toDouble(),"JULES")
+    GUESS = image_to_col(GUESS.toDouble(),"GUESS")
+    LPJmml =  image_to_col(LPJmml.toDouble(),"LPJmml")
+    LPX = image_to_col(LPX.toDouble(),"LPX")
+    OCN =  image_to_col(OCN.toDouble(),"OCN")
+    ORCHIDEE =  image_to_col(ORCHIDEE.toDouble(),"ORCHIDEE")
+    SDVGM =  image_to_col(SDVGM.toDouble(),"SDVGM")
+    VISIT =  image_to_col(VISIT.toDouble(),"VISIT")
+    YIB =  image_to_col(YIB.toDouble(),"YIB")
+//
+
+var filtereq = ee.Filter.equals({
+  leftField: 'year',
+  rightField: 'year',
+});
+var join = ee.Join.saveFirst({
+    matchKey: 'match',
+});
+
+var Trendy = ee.ImageCollection(join.apply(CABLE,CLASSIC,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,CLM5,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,EDv,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,IBIS,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,ISBA,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,JSBACH,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,JULES,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,GUESS,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,LPJmml,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,LPX,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,OCN,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,ORCHIDEE,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,SDVGM,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,VISIT,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+var Trendy = ee.ImageCollection(join.apply(Trendy,YIB,filtereq)).map(function(image) {return image.addBands(image.get('match'));});
+
+var roi = ee.FeatureCollection("projects/ee-urbanstudyinequality-1/assets/California")
+
+var chart =
+    ui.Chart.image
+        .series({
+          imageCollection: Trendy,
+          region: roi,
+          reducer: ee.Reducer.mean(),
+          scale: 55000,
+          xProperty: 'system:time_start'
+        })
+        .setOptions({
+          title: 'AR1',
+          hAxis: {title: 'Date', titleTextStyle: {italic: false, bold: true}},
+          vAxis: {
+            title: ' ',
+            titleTextStyle: {italic: false, bold: true}
+          },
+          lineWidth: 5,
+          curveType: 'function'
+        });
+
+print(chart)
+
+
+
+
+
+
+
+
+
+
+
+
+/*//1982-2022
+var CABLE = image_to_col(CABLE.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("CABLE")
+    CLASSIC = image_to_col(CLASSIC.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("CLASSIC")
+    CLM5 =  image_to_col(CLM5.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("CLM5")
+    EDv = image_to_col(EDv.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("EDv")
+    IBIS =  image_to_col(IBIS.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("IBIS")
+    ISBA =  image_to_col(ISBA.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("ISBA")
+    JSBACH =  image_to_col(JSBACH.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("JSBACH")
+    JULES =  image_to_col(JULES.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("JULES")
+    GUESS = image_to_col(GUESS.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("GUESS")
+    LPJmml =  image_to_col(LPJmml.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("LPJmml")
+    LPX = image_to_col(LPX.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("LPX")
+    OCN =  image_to_col(OCN.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("OCN")
+    ORCHIDEE =  image_to_col(ORCHIDEE.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("ORCHIDEE")
+    SDVGM =  image_to_col(SDVGM.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("SDVGM")
+    VISIT =  image_to_col(VISIT.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("VISIT")
+    YIB =  image_to_col(YIB.toDouble(),"AR1").map(createYear).select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("YIB")
+
+var MME = CABLE.add(CLASSIC).add(CLM5).add(EDv).add(IBIS).add(ISBA).add(JSBACH).add(JULES).add(GUESS).add(LPJmml).add(LPX).add(OCN).add(ORCHIDEE)
+.add(SDVGM).add(VISIT).add(YIB).divide(15).rename("MME")
+
+var all = CABLE.addBands(CLASSIC).addBands(CLM5).addBands(EDv).addBands(IBIS).addBands(ISBA).addBands(JSBACH).addBands(JULES).addBands(GUESS).addBands(LPJmml).addBands(LPX).addBands(OCN).addBands(ORCHIDEE)
+.addBands(SDVGM).addBands(VISIT).addBands(YIB).addBands(MME)
+
+Export.image.toDrive({
+ image:all,
+  description: 'all_AR1_kendall',
+  folder: 'all_AR1_kendall', 
+  scale: 55000,
+  maxPixels: 1e13})
+
+var roi = ee.FeatureCollection("projects/ee-urbanstudyinequality-1/assets/California");
+
+var all = CABLE.addBands(CLASSIC).addBands(CLM5).addBands(EDv).addBands(IBIS).addBands(ISBA).addBands(JSBACH).addBands(JULES).addBands(GUESS).addBands(LPJmml).addBands(LPX).addBands(OCN).addBands(ORCHIDEE)
+.addBands(SDVGM).addBands(VISIT).addBands(YIB).addBands(MME).clip(roi)
+
+Export.image.toDrive({
+ image:all,
+  description: 'california_AR1_kendall',
+  folder: 'california_AR1_kendall', 
+  scale: 55000,
+  maxPixels: 1e13})*/
+
+// //1982-2000
+// var i = "1982_2000"
+// var CABLE = image_to_col(CABLE.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("CABLE")
+//     CLASSIC = image_to_col(CLASSIC.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("CLASSIC")
+//     CLM5 =  image_to_col(CLM5.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("CLM5")
+//     EDv = image_to_col(EDv.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("EDv")
+//     IBIS =  image_to_col(IBIS.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("IBIS")
+//     ISBA =  image_to_col(ISBA.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("ISBA")
+//     JSBACH =  image_to_col(JSBACH.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("JSBACH")
+//     JULES =  image_to_col(JULES.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("JULES")
+//     GUESS = image_to_col(GUESS.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("GUESS")
+//     LPJmml =  image_to_col(LPJmml.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("LPJmml")
+//     LPX = image_to_col(LPX.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("LPX")
+//     OCN =  image_to_col(OCN.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("OCN")
+//     ORCHIDEE =  image_to_col(ORCHIDEE.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("ORCHIDEE")
+//     SDVGM =  image_to_col(SDVGM.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("SDVGM")
+//     VISIT =  image_to_col(VISIT.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("VISIT")
+//     YIB =  image_to_col(YIB.toDouble(),"AR1").map(createYear).filterDate("1982-01-01","2000-01-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("YIB")
+
+// var MME = CABLE.add(CLASSIC).add(CLM5).add(EDv).add(IBIS).add(ISBA).add(JSBACH).add(JULES).add(GUESS).add(LPJmml).add(LPX).add(OCN).add(ORCHIDEE)
+// .add(SDVGM).add(VISIT).add(YIB).divide(15).rename("MME")
+
+// var all = CABLE.addBands(CLASSIC).addBands(CLM5).addBands(EDv).addBands(IBIS).addBands(ISBA).addBands(JSBACH).addBands(JULES).addBands(GUESS).addBands(LPJmml).addBands(LPX).addBands(OCN).addBands(ORCHIDEE)
+// .addBands(SDVGM).addBands(VISIT).addBands(YIB).addBands(MME)
+
+// Export.image.toDrive({
+// image:all,
+//   description: 'all_AR1_kendall'+i,
+//   folder: 'all_AR1_kendall'+i, 
+//   scale: 55000,
+//   maxPixels: 1e13})
+
+// var roi = ee.FeatureCollection("projects/ee-urbanstudyinequality-1/assets/California");
+
+// var all = CABLE.addBands(CLASSIC).addBands(CLM5).addBands(EDv).addBands(IBIS).addBands(ISBA).addBands(JSBACH).addBands(JULES).addBands(GUESS).addBands(LPJmml).addBands(LPX).addBands(OCN).addBands(ORCHIDEE)
+// .addBands(SDVGM).addBands(VISIT).addBands(YIB).addBands(MME).clip(roi)
+
+// Export.image.toDrive({
+// image:all,
+//   description: 'california_AR1_kendall'+i,
+//   folder: 'california_AR1_kendall'+i, 
+//   scale: 55000,
+//   maxPixels: 1e13})
+
+
+// //2000-2022
+// var i = "2000_2022"
+// var CABLE = image_to_col(CABLE.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("CABLE")
+//     CLASSIC = image_to_col(CLASSIC.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("CLASSIC")
+//     CLM5 =  image_to_col(CLM5.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("CLM5")
+//     EDv = image_to_col(EDv.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("EDv")
+//     IBIS =  image_to_col(IBIS.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("IBIS")
+//     ISBA =  image_to_col(ISBA.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("ISBA")
+//     JSBACH =  image_to_col(JSBACH.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("JSBACH")
+//     JULES =  image_to_col(JULES.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("JULES")
+//     GUESS = image_to_col(GUESS.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("GUESS")
+//     LPJmml =  image_to_col(LPJmml.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("LPJmml")
+//     LPX = image_to_col(LPX.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("LPX")
+//     OCN =  image_to_col(OCN.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("OCN")
+//     ORCHIDEE =  image_to_col(ORCHIDEE.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("ORCHIDEE")
+//     SDVGM =  image_to_col(SDVGM.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("SDVGM")
+//     VISIT =  image_to_col(VISIT.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("VISIT")
+//     YIB =  image_to_col(YIB.toDouble(),"AR1").map(createYear).filterDate("2000-01-01","2020-12-01").select(["year","AR1"]).reduce(ee.Reducer.kendallsCorrelation(2),4).select("tau").rename("YIB")
+
+// var MME = CABLE.add(CLASSIC).add(CLM5).add(EDv).add(IBIS).add(ISBA).add(JSBACH).add(JULES).add(GUESS).add(LPJmml).add(LPX).add(OCN).add(ORCHIDEE)
+// .add(SDVGM).add(VISIT).add(YIB).divide(15).rename("MME")
+
+// var all = CABLE.addBands(CLASSIC).addBands(CLM5).addBands(EDv).addBands(IBIS).addBands(ISBA).addBands(JSBACH).addBands(JULES).addBands(GUESS).addBands(LPJmml).addBands(LPX).addBands(OCN).addBands(ORCHIDEE)
+// .addBands(SDVGM).addBands(VISIT).addBands(YIB).addBands(MME)
+
+// Export.image.toDrive({
+// image:all,
+//   description: 'all_AR1_kendall'+i,
+//   folder: 'all_AR1_kendall'+i, 
+//   scale: 55000,
+//   maxPixels: 1e13})
+
+// var roi = ee.FeatureCollection("projects/ee-urbanstudyinequality-1/assets/California");
+
+// var all = CABLE.addBands(CLASSIC).addBands(CLM5).addBands(EDv).addBands(IBIS).addBands(ISBA).addBands(JSBACH).addBands(JULES).addBands(GUESS).addBands(LPJmml).addBands(LPX).addBands(OCN).addBands(ORCHIDEE)
+// .addBands(SDVGM).addBands(VISIT).addBands(YIB).addBands(MME).clip(roi)
+
+// Export.image.toDrive({
+// image:all,
+//   description: 'california_AR1_kendall'+i,
+//   folder: 'california_AR1_kendall'+i, 
+//   scale: 55000,
+//   maxPixels: 1e13})
+
+
